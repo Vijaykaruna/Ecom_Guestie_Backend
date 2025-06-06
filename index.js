@@ -8,9 +8,9 @@ const UserModel = require('./src/Users.js');
 const FoodsModal = require('./src/Foods.js');
 const SelectedFoodsModel = require('./src/SelecteddFoods.js');
 const GuestModel = require("./src/Guest.js"); 
-const ReviewModel = require('./src/Review.js')
-const OrderListModel = require("./src/OrderLists.js")
-
+const ReviewModel = require('./src/Review.js');
+const OrderListModel = require("./src/OrderLists.js");
+const ProfileModel = require('./src/Profile.js');
 
 const app = express();
 const salt = bcrypt.genSaltSync(10);
@@ -680,4 +680,88 @@ app.get("/Reviews", async (req, res) => {
   catch(error){
     res.status(error).json(error);
   }
-})
+});
+
+app.get("/CountOrderFoodList", async(req, res) => {
+    const{token} =req.cookies;
+    let id;
+    jwt.verify(token, secret, {}, (err, info)=> {
+        if(err) throw err;
+        id = info.id;
+    })
+    const CountOrder = await OrderListModel.countDocuments({id, status: "Delivered"});
+    res.status(200).json(CountOrder);
+});
+
+app.get("/TotalAmount", async (req, res) => {
+  const { token } = req.cookies;
+  try {
+    const info = jwt.verify(token, secret);
+    const id = info.id;
+
+    const orders = await OrderListModel.find({ id, status: "Delivered" });
+    res.status(200).json({ orders });
+  } catch (error) {
+    console.error("Error syncing amounts", error);
+    res.status(500).json({ message: "Failed to sync amounts." });
+  }
+});
+
+app.post("/ProfileDetails", async(req, res) => {
+  const { userName, mail, mobile, hotelName, rooms, address } = req.body;
+  const { token } = req.cookies;
+  try{
+    const info = jwt.verify(token, secret);
+    const id = info.id;
+    
+    const deletePrev = await ProfileModel.deleteMany({ id });
+
+    const UserDoc = await ProfileModel.create({
+      id,
+      user: userName,
+      email: mail,
+      mobile,
+      rooms,
+      hotel: hotelName,
+      address,
+    })
+  res.status(200).json({ message: "Prev deleted and Profile added successfully"});
+  }catch (e) {
+    res.status(400).json(e);
+  } 
+});
+app.get("/UserDetails", async(req, res) => {
+  const { token } = req.cookies;
+  try{
+    const info = jwt.verify(token, secret);
+    const id = info.id;
+    
+    const UserProfile = await ProfileModel.findOne({ id });
+    res.status(200).json(UserProfile);
+  }
+  catch(error){
+    res.status(400).json(error);
+  }
+});
+
+app.patch("/SetRooms", async(req, res) => {
+  const { rooms } = req.body;
+  const { token } = req.cookies;
+  try{
+    const info = jwt.verify(token, secret);
+    const id = info.id;
+    const updatedRooms = await ProfileModel.findOneAndUpdate(
+      { id },
+      { rooms: rooms },
+      { new: true }
+    );
+    if(!updatedRooms){
+      return res.status(404).json({message:" User not found"});
+    }
+    const UserProfile = await ProfileModel.findOne({ id });
+    res.status(200).json({message: "Rooms updated", data: UserProfile});
+   // res.status(200).json({message: "Rooms updated", data: updatedRooms});
+  } catch(err){
+    res.status(500).json(err);
+  }
+});
