@@ -8,6 +8,7 @@ const ReviewSchema = new Schema({
     name: { type: String, required: true },
     date: { type: String, required: true },
     roomNumber: { type: Number, required: true },
+    types: { type: String, required: true },
 })
 
 module.exports = model("Review_Page", ReviewSchema);

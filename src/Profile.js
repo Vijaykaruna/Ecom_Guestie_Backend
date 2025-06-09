@@ -7,7 +7,7 @@ const ProfileSchema = new Schema({
     email: { type: String, required: true },
     mobile: { type: String, required: true },
     hotel: { type: String, required: true },
-    rooms: { type: Number, required: false },
+    rooms: { type: Number, required: true },
     address: { type: String, required: true },
 });
 

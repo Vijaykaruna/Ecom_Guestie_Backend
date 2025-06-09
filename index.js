@@ -647,7 +647,7 @@ app.patch("/PaymentStatus", async (req, res) => {
 });
 
 app.post("/AddReview", async (req, res) => {
-  const { guestId, comments, name, date, roomNumber } = req.body; // <-- FIXED
+  const { guestId, comments, name, date, roomNumber, types } = req.body;
   const { token } = req.cookies;
 
   try {
@@ -661,6 +661,30 @@ app.post("/AddReview", async (req, res) => {
       name,
       date,
       roomNumber,
+      types,
+    });
+
+    res.status(200).json({ message: "Review added successfully", reviewDoc });
+  } catch (e) {
+    res.status(400).json(e);
+  }
+});
+app.post("/AddReport", async (req, res) => {
+  const { guestId, comments, name, date, roomNumber, types } = req.body; // <-- FIXED
+  const { token } = req.cookies;
+
+  try {
+    const info = jwt.verify(token, secret);
+    const id = info.id;
+
+    const reviewDoc = await ReviewModel.create({
+      id,
+      guestId,
+      message: comments,
+      name,
+      date,
+      roomNumber,
+      types,
     });
 
     res.status(200).json({ message: "Review added successfully", reviewDoc });
@@ -760,8 +784,28 @@ app.patch("/SetRooms", async(req, res) => {
     }
     const UserProfile = await ProfileModel.findOne({ id });
     res.status(200).json({message: "Rooms updated", data: UserProfile});
-   // res.status(200).json({message: "Rooms updated", data: updatedRooms});
   } catch(err){
     res.status(500).json(err);
   }
 });
+
+app.get("/Rooms", async (req, res) => {
+  const { token } = req.cookies;
+
+  try {
+    const info = jwt.verify(token, secret);
+    const id = info.id;
+
+    const profile = await ProfileModel.findOne({ id });
+
+    if (!profile) {
+      return res.status(404).json({ message: "Profile not found" });
+    }
+
+    res.status(200).json({ message: "Successfully found", data: profile.rooms });
+  } catch (error) {
+    console.error("Error in /Rooms:", error.message);
+    res.status(500).json({ message: "Internal Server Error", error: error.message });
+  }
+});
+
