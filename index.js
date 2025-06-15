@@ -670,7 +670,7 @@ app.post("/AddReview", async (req, res) => {
   }
 });
 app.post("/AddReport", async (req, res) => {
-  const { guestId, comments, name, date, roomNumber, types } = req.body; // <-- FIXED
+  const { guestId, comments, name, date, roomNumber, types } = req.body; 
   const { token } = req.cookies;
 
   try {
@@ -731,29 +731,45 @@ app.get("/TotalAmount", async (req, res) => {
   }
 });
 
-app.post("/ProfileDetails", async(req, res) => {
-  const { userName, mail, mobile, hotelName, rooms, address } = req.body;
+app.post("/ProfileDetails", async (req, res) => {
+  const { userName, mail, mobile, hotelName, address, subscripe } = req.body;
   const { token } = req.cookies;
-  try{
+
+  try {
     const info = jwt.verify(token, secret);
     const id = info.id;
-    
-    const deletePrev = await ProfileModel.deleteMany({ id });
 
-    const UserDoc = await ProfileModel.create({
+    const existingProfile = await ProfileModel.findOne({ id });
+
+    if (existingProfile) {
+      await ProfileModel.updateOne(
+        { id },
+        {
+          hotel: hotelName,
+          mobile,
+          address,
+        }
+      );
+      return res.status(200).json({ message: "Profile updated successfully" });
+    }
+
+    await ProfileModel.create({
       id,
       user: userName,
       email: mail,
       mobile,
-      rooms,
+      rooms: 10,
       hotel: hotelName,
       address,
-    })
-  res.status(200).json({ message: "Prev deleted and Profile added successfully"});
-  }catch (e) {
-    res.status(400).json(e);
-  } 
+      subscripe,
+    });
+
+    res.status(200).json({ message: "Profile created successfully" });
+  } catch (e) {
+    res.status(400).json({ message: "Error saving profile", error: e.message });
+  }
 });
+
 app.get("/UserDetails", async(req, res) => {
   const { token } = req.cookies;
   try{
@@ -768,24 +784,27 @@ app.get("/UserDetails", async(req, res) => {
   }
 });
 
-app.patch("/SetRooms", async(req, res) => {
-  const { rooms } = req.body;
+app.patch("/SetRooms", async (req, res) => {
+  const { roomsInput } = req.body;
   const { token } = req.cookies;
-  try{
+
+  try {
     const info = jwt.verify(token, secret);
     const id = info.id;
-    const updatedRooms = await ProfileModel.findOneAndUpdate(
-      { id },
-      { rooms: rooms },
-      { new: true }
+
+    const updatedProfile = await ProfileModel.findOneAndUpdate(
+      { id: id, subscripe: true }, 
+      { $set: { rooms: roomsInput } },           
+      { new: true }                 
     );
-    if(!updatedRooms){
-      return res.status(404).json({message:" User not found"});
+
+    if (!updatedProfile) {
+      return res.status(400).json({ message: "Your subscription has expired or user not found." });
     }
-    const UserProfile = await ProfileModel.findOne({ id });
-    res.status(200).json({message: "Rooms updated", data: UserProfile});
-  } catch(err){
-    res.status(500).json(err);
+
+    res.status(200).json({ message: "Rooms updated", data: updatedProfile });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
   }
 });
 
@@ -809,3 +828,40 @@ app.get("/Rooms", async (req, res) => {
   }
 });
 
+app.get("/SubcripedUser", async (req, res) => {
+  try {
+    const usersPrime = await ProfileModel.find(); 
+    res.status(200).json(usersPrime); 
+  } catch (error) {
+    res.status(400).json({ error: error.message });
+  }
+});
+
+app.post("/ActiveSubscripe", async (req, res) => {
+  const { id } = req.body;
+  try {
+    const activateUser = await ProfileModel.updateOne(
+      { id },
+      { $set: { subscripe: true } }
+    );
+    res.status(200).json({ message: "Successfully changed" });
+  } catch (e) {
+    res.status(400).json({ message: "Error Changing status", error: e.message });
+  }
+}); 
+
+app.post("/UnSubscriped", async (req, res) => {
+  const { token } = req.cookies; 
+  try {
+    const info = jwt.verify(token, secret);
+    const id = info.id;
+
+    const activateUser = await ProfileModel.updateOne(
+      { id },
+      { $set: { rooms: 10 } }
+    );
+    res.status(200).json({ message: "You are unsubscribed and room count reset to 10." });
+  } catch (e) {
+    res.status(400).json({ message: "Error Changing status", error: e.message });
+  }
+});

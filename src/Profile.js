@@ -7,8 +7,9 @@ const ProfileSchema = new Schema({
     email: { type: String, required: true },
     mobile: { type: String, required: true },
     hotel: { type: String, required: true },
-    rooms: { type: Number, required: true },
+    rooms: { type: Number, default: 10, required: true },
     address: { type: String, required: true },
+    subscripe: { type: Boolean, required: true },
 });
 
 module.exports = model("Profile", ProfileSchema);
